@@ -1,0 +1,4 @@
+mvn clean pakage
+
+java -jar target\recomendacao-musical-1.0-SNAPSHOT.jar servidor 5000
+http://localhost:8080

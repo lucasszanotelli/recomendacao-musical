@@ -35,11 +35,24 @@ public final class MusicWebServer implements AutoCloseable {
                     send(exchange, 200, page(name));
                 } else if (exchange.getRequestMethod().equals("POST") && (path.equals("/avaliar") || path.equals("/cadastrar"))) {
                     byte[] body = exchange.getRequestBody().readNBytes(4097);
-                    if (body.length > 4096) { send(exchange, 413, "Pedido muito grande"); return; }
+                    if (body.length > 4096) {
+                        send(exchange, 413, "Pedido muito grande");
+                        return;
+                    }
                     Map<String, String> form = params(new String(body, StandardCharsets.UTF_8));
                     String name = form.getOrDefault("usuario", "");
                     if (path.equals("/cadastrar")) service.register(name);
-                    else service.rate(name, Integer.parseInt(form.getOrDefault("artista", "")), Integer.parseInt(form.getOrDefault("nota", "")));
+                    else if (form.containsKey("artista")) {
+                        // Compatibilidade com pedidos individuais feitos por clientes externos.
+                        service.rate(name, Integer.parseInt(form.getOrDefault("artista", "")), Integer.parseInt(form.getOrDefault("nota", "")));
+                    } else {
+                        int[] notes = new int[MusicService.ARTISTS.size()];
+                        for (int i = 0; i < notes.length; i++) {
+                            notes[i] = Integer.parseInt(form.getOrDefault("nota_" + (i + 1), ""));
+                            if (notes[i] < 0 || notes[i] > 4) throw new IllegalArgumentException("Nota: 0 a 4");
+                        }
+                        for (int i = 0; i < notes.length; i++) service.rate(name, i + 1, notes[i]);
+                    }
                     exchange.getResponseHeaders().set("Location", "/?usuario=" + URLEncoder.encode(name, StandardCharsets.UTF_8));
                     exchange.sendResponseHeaders(303, -1);
                 } else {
@@ -83,9 +96,10 @@ public final class MusicWebServer implements AutoCloseable {
                 .grid{display:grid;grid-template-columns:1.3fr 1fr;gap:20px}.toolbar{display:flex;flex-wrap:wrap;gap:20px;align-items:end}
                 form{display:flex;gap:8px;align-items:center;flex-wrap:wrap}input,select,button{font:inherit;padding:10px;border-radius:8px;border:1px solid #b6cbc2;max-width:100%}
                 button{background:#14634f;color:white;border:0;cursor:pointer}button:hover{background:#0c493a}label{font-weight:600}
+                .ratings-form{display:block}.rating-options{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.rating-options label{font-weight:400;display:flex;gap:3px;align-items:center}.rating-options input[type=radio]{padding:0;accent-color:#14634f}.save-all{margin-top:18px}
                 table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:12px 4px;border-bottom:1px solid #e7efeb}th{font-size:13px;color:#536b62}
                 .card{border-left:4px solid #25856c;padding:8px 16px;background:#f1f8f5;margin:12px 0}.muted{color:#526b62;font-size:14px}
-                @media(max-width:760px){.grid{grid-template-columns:1fr}section{padding:16px}td form{gap:4px}}
+                @media(max-width:760px){.grid{grid-template-columns:1fr}section{padding:16px}.rating-options{gap:5px}}
                 </style></head><body><main><header><span class="tag">DESCUBRA SEU PRÓXIMO SOM</span>
                 <h1>Recomendação musical</h1><p>Avalie seus artistas e descubra sugestões a partir de quem tem gostos parecidos com os seus.</p></header>
                 <section class="toolbar"><form method="get" action="/"><label for="perfil">Perfil</label><select id="perfil" name="usuario">
@@ -97,15 +111,15 @@ public final class MusicWebServer implements AutoCloseable {
                 <form method="post" action="/cadastrar"><label for="novo">Novo usuário</label>
                 <input id="novo" name="usuario" maxlength="30" placeholder="Seu nome, sem espaços" required><button>Cadastrar</button></form></section>
                 <div class="grid"><section><h2>Avaliações de
-                """).append(escape(name)).append("</h2><p class='muted'>0 = não conheço · 1 = não gosto · 2 = gosto muito pouco · 3 = gosto · 4 = gosto muito</p><table><thead><tr><th>Artista / banda</th><th>Sua nota</th></tr></thead><tbody>");
+                """).append(escape(name)).append("</h2><p class='muted'>0 = não conheço · 1 = não gosto · 2 = gosto muito pouco · 3 = gosto · 4 = gosto muito</p><form class='ratings-form' method='post' action='/avaliar'><input type='hidden' name='usuario' value=\"").append(escape(name)).append("\"><table><thead><tr><th>Artista / banda</th><th>Sua nota</th></tr></thead><tbody>");
             for (int i = 0; i < 15; i++) {
-                html.append("<tr><td>").append(escape(MusicService.ARTISTS.get(i))).append("</td><td><form method='post' action='/avaliar'>")
-                    .append("<input type='hidden' name='usuario' value=\"").append(escape(name)).append("\"><input type='hidden' name='artista' value='").append(i + 1)
-                    .append("'><select name='nota' aria-label='Nota para ").append(escape(MusicService.ARTISTS.get(i))).append("'>");
-                for (int n = 0; n <= 4; n++) html.append("<option").append(ratings[i] == n ? " selected" : "").append(">").append(n).append("</option>");
-                html.append("</select><button>Salvar</button></form></td></tr>");
+                String artist = escape(MusicService.ARTISTS.get(i));
+                html.append("<tr><td>").append(artist).append("</td><td><div class='rating-options' role='radiogroup' aria-label='Nota para ").append(artist).append("'>");
+                for (int n = 0; n <= 4; n++) html.append("<label><input type='radio' name='nota_").append(i + 1).append("' value='").append(n)
+                        .append("'").append(ratings[i] == n ? " checked" : "").append("> ").append(n).append("</label>");
+                html.append("</div></td></tr>");
             }
-            html.append("</tbody></table></section><div><section><h2>Para você ouvir</h2><p class='muted'>Sugestões para artistas que você ainda não avaliou.</p>");
+            html.append("</tbody></table><button class='save-all' type='submit'>Salvar todas as avaliações</button></form></section><div><section><h2>Para você ouvir</h2><p class='muted'>Sugestões para artistas que você ainda não avaliou.</p>");
             var recommendations = service.recommend(name);
             if (recommendations.isEmpty()) html.append("<p>Ainda não há sugestões. Avalie mais artistas; se você já avaliou todos, não há novos candidatos.</p>");
             for (var r : recommendations) html.append("<div class='card'><strong>").append(escape(r.name())).append("</strong><p>Nota estimada: ")

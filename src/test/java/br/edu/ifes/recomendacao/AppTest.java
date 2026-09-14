@@ -21,12 +21,19 @@ public class AppTest extends TestCase {
             assertEquals(200, page.statusCode());
             assertTrue(page.body().contains("Nirvana"));
             assertTrue(page.body().contains("Recomendação musical"));
+            assertTrue(page.body().contains("type='radio'"));
+            assertTrue(page.body().contains("Salvar todas as avaliações"));
+            var batchUpdate = client.send(java.net.http.HttpRequest.newBuilder(URI.create(base + "/avaliar"))
+                .POST(java.net.http.HttpRequest.BodyPublishers.ofString("usuario=Ana&nota_1=2&nota_2=1&nota_3=0&nota_4=4&nota_5=3&nota_6=0&nota_7=0&nota_8=0&nota_9=0&nota_10=0&nota_11=0&nota_12=0&nota_13=0&nota_14=0&nota_15=0")).build(), java.net.http.HttpResponse.BodyHandlers.ofString());
+            assertEquals(303, batchUpdate.statusCode());
+            assertEquals(2, service.profile("Ana")[0]);
+            assertEquals(3, service.profile("Ana")[4]);
             var update = client.send(java.net.http.HttpRequest.newBuilder(URI.create(base + "/avaliar"))
                 .POST(java.net.http.HttpRequest.BodyPublishers.ofString("usuario=Ana&artista=5&nota=4")).build(), java.net.http.HttpResponse.BodyHandlers.ofString());
             assertEquals(303, update.statusCode());
             try (Socket socket = new Socket("localhost", tcp.port())) {
                 socket.setSoTimeout(5000);
-                assertTrue(request(socket, "PERFIL Ana").getFirst().startsWith("[4, 3, 4, 3, 4"));
+                assertTrue(request(socket, "PERFIL Ana").getFirst().startsWith("[2, 1, 0, 4, 4"));
             }
             var invalid = client.send(java.net.http.HttpRequest.newBuilder(URI.create(base + "/avaliar"))
                 .POST(java.net.http.HttpRequest.BodyPublishers.ofString("usuario=Ana&artista=5&nota=9")).build(), java.net.http.HttpResponse.BodyHandlers.ofString());
