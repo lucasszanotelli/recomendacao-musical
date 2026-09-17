@@ -1,0 +1,11 @@
+No PowerShell, abra esta pasta e execute:
+mvn clean package
+java -jar target\recomendacao-musical-1.0-SNAPSHOT.jar servidor 5000
+
+Deixe o terminal do servidor aberto e acesse http://localhost:8080
+Em outro terminal, na mesma pasta, execute:
+java -jar target\recomendacao-musical-1.0-SNAPSHOT.jar cliente localhost 5000
+
+No cliente, experimente USUARIOS, PERFIL Isadora e SAIR.
+Para encerrar o servidor, pressione Ctrl+C no terminal dele.
+Requisitos: JDK 21 ou mais recente e Maven instalados; confira com java -version e mvn -version.
