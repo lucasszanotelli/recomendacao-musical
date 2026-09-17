@@ -100,8 +100,8 @@ public final class MusicWebServer implements AutoCloseable {
                 table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:12px 4px;border-bottom:1px solid #e7efeb}th{font-size:13px;color:#536b62}
                 .card{border-left:4px solid #25856c;padding:8px 16px;background:#f1f8f5;margin:12px 0}.muted{color:#526b62;font-size:14px}
                 @media(max-width:760px){.grid{grid-template-columns:1fr}section{padding:16px}.rating-options{gap:5px}}
-                </style></head><body><main><header><span class="tag">DESCUBRA SEU PRÓXIMO SOM</span>
-                <h1>Recomendação musical</h1><p>Avalie seus artistas e descubra sugestões a partir de quem tem gostos parecidos com os seus.</p></header>
+                </style></head><body><main><header>
+                <h1>Recomendação musical</h1></header>
                 <section class="toolbar"><form method="get" action="/"><label for="perfil">Perfil</label><select id="perfil" name="usuario">
                 """);
             for (String user : service.users()) html.append("<option value=\"").append(escape(user)).append("\"")
@@ -129,7 +129,7 @@ public final class MusicWebServer implements AutoCloseable {
             if (neighbors.isEmpty()) html.append("<p>Avalie um artista para começar a comparar seu perfil.</p>");
             for (var n : neighbors) html.append("<p><strong>").append(escape(n.name())).append("</strong><br><span class='muted'>Distância: ")
                     .append(String.format(Locale.forLanguageTag("pt-BR"), "%.3f", n.distance())).append(" · ").append(n.common()).append(" artistas em comum</span></p>");
-            return html.append("</section></div></div><p class='muted'>As alterações são compartilhadas com os outros clientes. Os dados são reiniciados quando o servidor é encerrado.</p></main></body></html>").toString();
+            return html.append("</section></div></div><p class='muted'>By Lucas Zanotelli, Evandro Neto, Joel Hanerth e Arthur Alves</p></main></body></html>").toString();
         }
     }
 }
